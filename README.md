@@ -13,7 +13,7 @@ Symbolication will only symbolicate symbols native to your app.  The xcode tools
 
 When looking for a .dSYM, gdb does not care about the file name. If a non-matching .dSYM file is in the same directory, gdb may try and use it and provide inaccurate results. Double check your results and that you are using the right dSYM file.
 
-If you pass the .dSYM the matching .app file '''MUST''' be in the same directory for any symbols to be parsed. 
+If you pass the .dSYM the matching .app file __MUST__ be in the same directory for any symbols to be parsed. 
 
 If you pass the .app you can still parse some symbols if you don't have the .dSYM file.  However, gdb will look for a .dSYM file in the same directory as the .app and if it finds it you will get the same results as if you passed the .dSYM.  
 
