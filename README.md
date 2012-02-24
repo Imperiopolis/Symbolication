@@ -9,7 +9,7 @@ or
     
 Symblocation only supports iOS based crash logs due to the use of the iOS version of gdb.  With some simple tweaks, symbolication of all crash logs should be possible.
 
-Symbolication will only symbolicate symbols native to your app.  The xcode tools should be used to symbolicate the Apple symbols (or you can not-symbolicate them, often where an app crashed in your code is more relevant to debugging).
+Symbolication will only symbolicate symbols native to your app.  The xcode tools should be used to symbolicate the Apple symbols (or you can choose to not-symbolicate them, often where an app crashed in your code is more relevant to debugging).
 
 When looking for a .dSYM, gdb does not care about the file name. If a non-matching .dSYM file is in the same directory, gdb may try and use it and provide inaccurate results. Double check your results and that you are using the right dSYM file.
 
