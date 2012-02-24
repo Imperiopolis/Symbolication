@@ -1,0 +1,149 @@
+#!/usr/bin/python
+
+# Copyright (C) 2012 Nathan Trapp
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this 
+# software and associated documentation files (the "Software"), to deal in the Software 
+# without restriction, including without limitation the rights to use, copy, modify, merge, 
+# publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
+# to whom the Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all copies or 
+# substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING 
+# BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+from optparse import OptionParser
+from sys import stdout, exit
+from subprocess import PIPE, Popen
+from os.path import exists, split as splitpath
+
+gdb = '/Developer/Platforms/iPhoneOS.platform/Developer/usr/libexec/gdb/gdb-arm-apple-darwin'
+
+def symbolicate(addr, path):
+	try:
+		f = open('/tmp/gdbcmds','w')
+		f.write("set print symbol-filename on\n")
+		f.write("p/a "+addr)
+		f.close()
+		result = Popen([gdb,"--batch","--quiet","--interpreter","mi","-x","/tmp/gdbcmds",path], stdout=PIPE)
+		for results in result.stdout.readlines():
+			result = results
+		if "+[" in result:
+			result = result.split('<')[1].split('>')[0].split(']+')
+			result[0] = result[0]+']'
+			result[1] = result[1].split('at ')[1]
+			result[1] = splitpath(result[1])[1]
+			result[1] = '('+result[1]+')'
+			result = ' '.join(result)
+		elif " at " in result:
+			result = result.split('<')[1].split('>')[0].split('+')
+			result[1] = result[1].split('at ')[1]
+			result[1] = splitpath(result[1])[1]
+			result[1] = '('+result[1]+')'
+			result = ' '.join(result)
+		else:
+			result = ' + '.join(result.split('<')[1].split('>')[0].split('+'))
+		return result
+	except (KeyboardInterrupt, SystemExit):
+    		raise
+
+
+
+def main():
+	# get user input
+	parser = OptionParser(
+		usage="%prog dSYM log   OR   %prog app log",
+		description="Reads crash log from stdin, symbolicates, and writes to stdout.",
+		version='%prog v1.2 by Nathan Trapp',
+	)
+	opts, args = parser.parse_args()
+	#check for gdb
+	if not exists(gdb):
+		print "gdb-arm-apple-darwin not found, please install the iOS SDK."
+		exit()
+
+	# initialize variables
+	try:
+		for x in args[0].split('/'):
+			identifier = x
+		path = args[0].replace(identifier,'')
+		for x in identifier.split('.'):
+			type = x.lower()
+		identifier = identifier.split('.')[0]
+	except:
+		OptionParser.print_usage(parser)
+		exit()
+
+	# error checking
+	if (type != 'app') and (type != 'dsym'):
+		print type
+		print "Invalid .app or .dSYM file, please try again."
+		exit()
+	
+	if not exists(args[0]):
+		print args[0]+" does not exist, please try again."
+		exit()
+
+	try:
+		if not exists(args[1]):
+			print args[1]+" does not exist, please try again."
+			exit()
+	except:
+		print "You must enter a log file."
+		exit()
+
+	if (type == 'dsym') and not exists(path+identifier+'.app'):
+		print "You must have the .app file in the same directory as the .dSYM file, please correct this error and try again."
+		exit()
+	if (type == 'app') and not exists(path+identifier+'.app.dSYM'):
+		print "WARNING: "+identifier+".app.dSYM is not in the same directory as .app file, prepare for incorrect or limited symbolication!\n"
+	
+	# everything seems good, lets do this 
+	f = open(args[1],'r')
+	for lines in f:
+		line = lines.split(' ')
+		try:
+			if line[3].lower() == identifier.split(' ')[0].lower():
+				if type == 'dsym':
+					x = symbolicate(line[27],args[0])
+				else:
+					x = symbolicate(line[27],args[0]+'/'+identifier)
+				line[28] = x
+				line[29] = ''
+				line[30] = '\n'
+				stdout.write( ' '.join(line) )
+			elif line[2].lower() == identifier.split(' ')[0].lower():
+				if type == 'dsym':
+					x = symbolicate(line[26],args[0])
+				else:
+					x = symbolicate(line[26],args[0]+'/'+identifier)
+				line[27] = x
+				line[28] = ''
+				line[29] = '\n'
+				stdout.write( ' '.join(line) )
+			elif line[1].lower() == identifier.split(' ')[0].lower():
+				if type == 'dsym':
+					x = symbolicate(line[25],args[0])
+				else:
+					x = symbolicate(line[25],args[0]+'/'+identifier)
+				line[26] = x
+				line[27] = ''
+				line[28] = '\n'
+				stdout.write( ' '.join(line) )
+			else:
+				stdout.write( lines )
+		except (KeyboardInterrupt, SystemExit):
+			exit()		
+		except:
+			stdout.write(lines)
+		
+			
+
+if __name__ == '__main__':
+	main()
+
