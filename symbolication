@@ -22,7 +22,11 @@ from sys import stdout, exit
 from subprocess import PIPE, Popen
 from os.path import exists, split as splitpath
 
-gdb = '/Developer/Platforms/iPhoneOS.platform/Developer/usr/libexec/gdb/gdb-arm-apple-darwin'
+xcodeselect = Popen(["xcode-select","-print-path"], stdout=PIPE)
+
+developer = xcodeselect.stdout.readline().rstrip()
+
+gdb = developer + '/Platforms/iPhoneOS.platform/Developer/usr/libexec/gdb/gdb-arm-apple-darwin'
 
 def symbolicate(addr, path):
 	try:
